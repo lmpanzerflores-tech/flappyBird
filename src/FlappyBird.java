@@ -151,36 +151,36 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
     //  LÓGICA
 
     public void mover() {
-        // --- Pássaro ---
+        //  Pássaro
         passaro.y += velocidadeY;            // aplica a velocidade
         passaro.y = Math.max(passaro.y, 0);  // não sai pelo topo
         velocidadeY += gravidadeY;           // gravidade: cai cada vez mais rápido
 
-        // --- Canos ---
+        // Canos
         for (int i = 0; i < Canos.size(); i++) {
             Cano cano = Canos.get(i);
             cano.X += velocidadeX;           // anda para a esquerda
 
-            // Passou do cano? Ganha 0,5 (2 canos por par = 1 ponto)
+            // Pontuação
             if (!cano.passou && passaro.x > cano.X + cano.Largura) {
                 pontuacao += 0.5;
                 cano.passou = true;
             }
 
-            // Bateu no cano?
+            // Bateu no cano
             if (colisao(passaro, cano)) {
                 fimDeJogo = true;
             }
         }
 
-        // Remove canos que saíram da tela (de trás para frente, para não pular nenhum)
+        // Remove canos que saíram da tela
         for (int i = Canos.size() - 1; i >= 0; i--) {
             if (Canos.get(i).X + Canos.get(i).Largura < 0) {
                 Canos.remove(i);
             }
         }
 
-        // Caiu no chão?
+        // Caiu no chão
         if (passaro.y > alturaTela) {
             fimDeJogo = true;
         }
