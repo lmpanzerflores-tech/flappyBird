@@ -1,22 +1,17 @@
-import javax.swing.*; // biblioteca para fazer janela
+import javax.swing.*;
 
-public class SMain {
-    public static void main(String[] args) throws Exception {
+public class Main {
+    public static void main(String[] args) {
 
-        int larguraTela = 360;
-        int alturaTela = 640;
+        JFrame janela = new JFrame("Flappy Bird"); // cria a janela com título
+        janela.setResizable(false);                // não deixa mudar o tamanho
+        janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // o X fecha o programa
 
-        JFrame janela = new JFrame("Flappy Bird"); // cria a janela
-        janela.setSize(larguraTela, alturaTela); // define o tamanho, altura e largura
-        janela.setLocationRelativeTo(null); // fixa a janela no meio, sem possibilidade de mover
-        janela.setResizable(false); // bloqueia o tamanho da janela para não alterar tamanho
-        janela.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // faz o "x" para fechar a janela
-
-        FlappyBird jogo = new FlappyBird();
-        janela.add(jogo); // add painel do jogo na janela principal
-        janela.pack(); // ajusta com tamanho total, ajusta automáticamente
-        jogo.requestFocus();
-        janela.setVisible(true); // deixar janela visivel
-
+        FlappyBird jogo = new FlappyBird();        // cria o jogo
+        janela.add(jogo);                          // coloca o jogo dentro da janela
+        janela.pack();                             // ajusta a janela ao tamanho do jogo (360x640)
+        janela.setLocationRelativeTo(null);        // centraliza na tela (depois do pack)
+        jogo.requestFocus();                       // faz o jogo receber o teclado
+        janela.setVisible(true);                   // mostra a janela
     }
 }

@@ -1,43 +1,64 @@
 import java.awt.*;
-import java.awt.event.*; // importa classe necessária para eventos
-import java.util.ArrayList; // definir coordenadas
+import java.awt.event.*;
+import java.util.ArrayList;
 import javax.swing.*;
-import java.util.Random;
 
 public class FlappyBird extends JPanel implements ActionListener, KeyListener {
 
+    //  DADOS DO JOGO
+
+    // Tamanho da tela
     int larguraTela = 360;
     int alturaTela = 640;
 
+    // Imagens
     Image Fundo;
     Image TaffeBird;
-    Image Cano1; // cano de cima
-    Image Cano2; // cano de baixo
+    Image Cano1;   // cano de cima
+    Image Cano2;   // cano de baixo
 
-    // define posição inicial do taffe bird
-    int passaroX = larguraTela / 8;
-    int passaroY = alturaTela / 2;
+    // Pássaro: posição e tamanho inicial
+    int passaroX = larguraTela / 8;   // perto da esquerda
+    int passaroY = alturaTela / 2;    // meio da tela
     int passaroLargura = 34;
     int passaroAltura = 24;
+
+    // Cano: posição e tamanho inicial
+    int canoX = larguraTela;          // nasce fora da tela, na direita
+    int canoY = 0;
+    int canoLargura = 64;
+    int canoAltura = 512;
+
+    // Margens de colisão
+    int margemPassaroX = 5;
+    int margemCanoX = 11;
+
+    // Física
+    int gravidadeY = 1;     // a cada frame, a queda acelera 1
+    int velocidadeY = 0;    // velocidade vertical do pássaro
+    int velocidadeX = -4;   // canos andam 4 pixels para a esquerda por frame
+
+    // Controle do jogo
+    Passaro passaro;
+    ArrayList<Cano> Canos;  // lista com todos os canos da tela
+    Timer loopDoJogo;       // atualiza o jogo 60 vezes por segundo
+    Timer timerCanos;       // cria um par de canos a cada 1,5 segundo
+    boolean fimDeJogo = false;
+    double pontuacao = 0;
+
+    //  CLASSES DOS OBJETOS
 
     class Passaro {
         int x = passaroX;
         int y = passaroY;
         int largura = passaroLargura;
         int altura = passaroAltura;
-
         Image img;
 
         Passaro(Image img) {
-            this.img = img; // criação do taffe bird
+            this.img = img;
         }
     }
-
-    // cano
-    int canoX = larguraTela;
-    int canoY = 0;
-    int canoLargura = 64;
-    int canoAltura = 512;
 
     class Cano {
         int X = canoX;
@@ -45,38 +66,21 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
         int Largura = canoLargura;
         int Altura = canoAltura;
         Image img;
-        boolean passou = false; // se o taffe bird já passou desse cano
+        boolean passou = false;   // evita dar o mesmo ponto duas vezes
 
         Cano(Image img) {
             this.img = img;
         }
     }
 
-    // diminui a área de colisão, pois as imagens têm borda transparente
-    int margemPassaroX = 5;
-    int margemCanoX = 11;
-
-    // lógica do jogo
-    int gravidadeY = 1;
-    Passaro passaro;
-    int velocidadeY = 0; // velocidade que o taffe bird pula
-    int velocidadeX = -4; // velocidade que os canos se movem para a esquerda
-
-    ArrayList<Cano> Canos;
-    Random random = new Random();
-
-    Timer loopDoJogo;
-    Timer timerCanos;
-    boolean fimDeJogo = false;
-    double pontuacao = 0;
+    //  PREPARAÇÃO
 
     FlappyBird() {
+        setPreferredSize(new Dimension(larguraTela, alturaTela));
+        setFocusable(true);      // permite receber teclas
+        addKeyListener(this);    // este painel escuta o teclado
 
-        setPreferredSize(new Dimension(larguraTela, alturaTela)); // cria o jogo com base nas dimensões definidas
-        // setBackground(Color.blue); // define cor do fundo
-        setFocusable(true);
-        addKeyListener(this);
-
+        // Carrega as imagens
         Fundo = new ImageIcon(getClass().getResource("./Background.jpeg")).getImage();
         Cano1 = new ImageIcon(getClass().getResource("./Cano1.png")).getImage();
         Cano2 = new ImageIcon(getClass().getResource("./Cano2.png")).getImage();
@@ -85,7 +89,7 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
         passaro = new Passaro(TaffeBird);
         Canos = new ArrayList<>();
 
-        // timer que coloca um novo par de canos a cada 1,5 segundo
+        // Relógio 1: a cada 1,5 s cria um par de canos
         timerCanos = new Timer(1500, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -94,15 +98,17 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
         });
         timerCanos.start();
 
-        loopDoJogo = new Timer(1000 / 60, this); // atualiza o jogo 60 vezes por segundo
+        // Relógio 2: 60 vezes por segundo roda o jogo (chama actionPerformed)
+        loopDoJogo = new Timer(1000 / 60, this);
         loopDoJogo.start();
-
     }
 
+    //  CRIAR CANOS
+
     public void ColocarCanos() {
-        // sorteia a altura do cano de cima
+        // Sorteia a posição do cano de cima (parte dele fica fora da tela)
         int canoYAleatorio = (int) (canoY - canoAltura / 4 - Math.random() * (canoAltura / 2));
-        int espacoAberto = alturaTela / 4; // buraco por onde o taffe bird passa
+        int espacoAberto = alturaTela / 4;   // tamanho do buraco (160 px)
 
         Cano canoCima = new Cano(Cano1);
         canoCima.Y = canoYAleatorio;
@@ -113,26 +119,24 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
         Canos.add(canoBaixo);
     }
 
-    public void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        desenhar(g);
+    //  DESENHAR
 
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);   // limpa a tela
+        desenhar(g);
     }
 
     public void desenhar(Graphics g) {
+        // O que é desenhado depois fica por cima
         g.drawImage(Fundo, 0, 0, larguraTela, alturaTela, null);
+        g.drawImage(passaro.img, passaro.x, passaro.y, passaro.largura, passaro.altura, null);
 
-        g.drawImage(TaffeBird, passaro.x, passaro.y, passaro.largura, passaro.altura, null);
-
-        // canos
         for (int i = 0; i < Canos.size(); i++) {
             Cano cano = Canos.get(i);
-
-            g.drawImage(cano.img, cano.X, cano.Y,
-                    cano.Largura, cano.Altura, null);
+            g.drawImage(cano.img, cano.X, cano.Y, cano.Largura, cano.Altura, null);
         }
 
-        // pontuação
+        // Texto da pontuação
         g.setColor(Color.white);
         g.setFont(new Font("Arial", Font.BOLD, 32));
         if (fimDeJogo) {
@@ -144,41 +148,45 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
         }
     }
 
-    public void mover() {
-        passaro.y += velocidadeY; // configura a velocidade y
-        passaro.y = Math.max(passaro.y, 0); // delimita que o taffe bird não saia da tela
-        velocidadeY += gravidadeY; // cria a gravidade para o jogo (taffe bird caí)
+    //  LÓGICA
 
-        // canos
+    public void mover() {
+        // --- Pássaro ---
+        passaro.y += velocidadeY;            // aplica a velocidade
+        passaro.y = Math.max(passaro.y, 0);  // não sai pelo topo
+        velocidadeY += gravidadeY;           // gravidade: cai cada vez mais rápido
+
+        // --- Canos ---
         for (int i = 0; i < Canos.size(); i++) {
             Cano cano = Canos.get(i);
-            cano.X += velocidadeX;
+            cano.X += velocidadeX;           // anda para a esquerda
 
-            // 0.5 por cano, como são 2 canos por par, cada par vale 1 ponto
+            // Passou do cano? Ganha 0,5 (2 canos por par = 1 ponto)
             if (!cano.passou && passaro.x > cano.X + cano.Largura) {
                 pontuacao += 0.5;
                 cano.passou = true;
             }
 
+            // Bateu no cano?
             if (colisao(passaro, cano)) {
                 fimDeJogo = true;
             }
         }
 
-        // remove os canos que já saíram da tela
+        // Remove canos que saíram da tela (de trás para frente, para não pular nenhum)
         for (int i = Canos.size() - 1; i >= 0; i--) {
             if (Canos.get(i).X + Canos.get(i).Largura < 0) {
                 Canos.remove(i);
             }
         }
 
-        // taffe bird caiu no chão
+        // Caiu no chão?
         if (passaro.y > alturaTela) {
             fimDeJogo = true;
         }
     }
 
-    // verifica se o taffe bird (a) encostou no cano (b)
+    // Os retângulos se sobrepõem na horizontal E na vertical?
     boolean colisao(Passaro a, Cano b) {
         int passaroEsquerda = a.x + margemPassaroX;
         int passaroDireita = a.x + a.largura - margemPassaroX;
@@ -186,45 +194,47 @@ public class FlappyBird extends JPanel implements ActionListener, KeyListener {
         int canoDireita = b.X + b.Largura - margemCanoX;
 
         return passaroEsquerda < canoDireita &&
-               passaroDireita > canoEsquerda &&
-               a.y < b.Y + b.Altura &&
-               a.y + a.altura > b.Y;
+                passaroDireita > canoEsquerda &&
+                a.y < b.Y + b.Altura &&
+                a.y + a.altura > b.Y;
     }
+
+    // LOOP DO JOGO 60x por segundo
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        mover();
-        repaint();
-        if (fimDeJogo) { // quando perde, para o jogo
+        mover();      // atualiza tudo
+        repaint();    // redesenha a tela
+        if (fimDeJogo) {          // se perdeu, para os relógios
             timerCanos.stop();
             loopDoJogo.stop();
         }
     }
 
-    // importa teclas padrões
-    @Override // desabilita shift, ctrl e teclas especiais
-    public void keyTyped(KeyEvent e) {
-    }
+    // TECLADO
 
-    @Override // quando você digita, a função é ativada na hora
+    @Override
     public void keyPressed(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-            velocidadeY = -9;
-
-            if (fimDeJogo) { // reinicia o jogo zerando tudo
+            if (fimDeJogo) {
+                // Reinicia: volta tudo ao começo
                 passaro.y = passaroY;
                 velocidadeY = 0;
                 Canos.clear();
-                fimDeJogo = false;
                 pontuacao = 0;
+                fimDeJogo = false;
                 loopDoJogo.start();
                 timerCanos.start();
+            } else {
+                velocidadeY = -9;   // pulo (negativo = para cima)
             }
         }
     }
 
-    @Override // dispara quando você tira o dedo da tecla
-    public void keyReleased(KeyEvent e) {
-    }
+    // Obrigatórios pela interface KeyListener, mas não usados
+    @Override
+    public void keyTyped(KeyEvent e) {}
 
+    @Override
+    public void keyReleased(KeyEvent e) {}
 }
